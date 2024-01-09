@@ -1,0 +1,4 @@
+init()
+{
+    printLn("hello world");
+}
