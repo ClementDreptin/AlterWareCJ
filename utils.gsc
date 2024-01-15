@@ -15,3 +15,23 @@ _SetAngles(angles)
     return self setPlayerAngles(angles);
 #endif
 }
+
+ProjectForward(distance)
+{
+    if (!isPlayer(self))
+    {
+        PrintError("self is not a player");
+        return;
+    }
+
+    origin = self getOrigin();
+    angles = self _GetAngles();
+    forwardVec = anglesToForward(angles) * distance;
+
+    return origin + (forwardVec[0], forwardVec[1], 0);
+}
+
+PrintError(message)
+{
+    printLn("*********** Error ***********\n" + message + "\n\tat " + __FILE__ + ":" + __LINE__);
+}

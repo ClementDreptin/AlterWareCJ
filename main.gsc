@@ -3,6 +3,7 @@ init()
     level.buttonCommands = [];
     level.buttonCommands[0] = "+smoke";
     level.buttonCommands[1] = "+frag";
+    level.buttonCommands[2] = "+talk";
 
     level thread OnPlayerConnected();
 }
@@ -46,5 +47,7 @@ MonitorButton(buttonCommand)
             self scripts\saveload::LoadPosition();
         else if (buttonCommand == "+frag")
             self scripts\saveload::SavePosition();
+        else if (buttonCommand == "+talk")
+            self scripts\carepackage::SpawnCarePackage();
     }
 }
