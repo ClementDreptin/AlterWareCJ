@@ -85,12 +85,13 @@ function PopulateConfig {
     [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
 
     # Ask the user for the installation path of each engine
+    $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
     foreach ($Engine in $Config)
     {
-        $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
         $Browser.Description = "Pick $($Engine.Label) installation folder"
         $Null = $Browser.ShowDialog()
         $Engine.Path = $Browser.SelectedPath
+        $Browser.SelectedPath = $(Get-Item $Browser.SelectedPath).Parent.FullName
     }
 
     # Dump the config to a JSON file
