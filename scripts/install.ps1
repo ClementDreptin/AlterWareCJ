@@ -1,8 +1,7 @@
-$Global:Cwd = $(Get-Location).Path
-$Global:DataDir = "$Cwd\data"
-$Global:SrcDir = "$PSScriptRoot\..\src"
-$Global:ConfigPath = "$DataDir\config.json"
-$Global:GscToolExePath = "$DataDir\gsc-tool.exe"
+$Cwd = $(Get-Location).Path
+$DataDir = "$Cwd\data"
+$SrcDir = "$PSScriptRoot\..\src"
+$GscToolExePath = "$DataDir\gsc-tool.exe"
 
 class Engine {
     [string]$Name
@@ -11,7 +10,7 @@ class Engine {
     [string]$ScriptDir
 }
 
-$Global:Config = @(
+$Config = @(
     [Engine]@{
         Name = "iw4"
         Label = "MW2"
@@ -35,12 +34,6 @@ $Global:Config = @(
 function DownloadGscTool {
     $ZipPath = "$DataDir\gsc-tool.zip"
     $DownloadUri = "https://github.com/xensik/gsc-tool/releases/latest/download/windows-x64-release.zip"
-
-    # Return early if the binary was already downloaded
-    if ([System.IO.File]::Exists($GscToolExePath)) {
-        Write-Output "gsc-tool already downloaded"
-        return
-    }
 
     # Download the latest binary
     try {
@@ -69,18 +62,6 @@ function DownloadGscTool {
 }
 
 function PopulateConfig {
-    # If the config file already exists, load the config from it
-    if ([System.IO.File]::Exists($ConfigPath)) {
-        try {
-            $Global:Config = Get-Content $ConfigPath | ConvertFrom-Json
-            Write-Output "Loaded config from $ConfigPath"
-        } catch {
-            throw "Could not load config from $ConfigPath"
-        }
-
-        return
-    }
-
     # Load the Windows Forms assembly (required for file dialogs)
     [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
 
@@ -91,15 +72,6 @@ function PopulateConfig {
         $Browser.Description = "Pick $($Engine.Label) installation folder"
         $Null = $Browser.ShowDialog()
         $Engine.Path = $Browser.SelectedPath
-        $Browser.SelectedPath = $(Get-Item $Browser.SelectedPath).Parent.FullName
-    }
-
-    # Dump the config to a JSON file
-    try {
-        $Null = New-Item -ItemType "file" -Path $ConfigPath -Value ($Config | ConvertTo-Json)
-        Write-Output "Created config file at $ConfigPath"
-    } catch {
-        throw "Could not create config file at $ConfigPath"
     }
 }
 
@@ -110,13 +82,12 @@ function GenerateParsedFiles {
         Write-Output "Processing $($Engine.Label)"
 
         # gsc-tool doesn't support iw4 but parsing scripts as iw5 is fine for this mod
-        $EngineName = $Engine.Name
         if ($Engine.Name -eq "iw4") {
-            $EngineName = "iw5"
+            $Engine.Name = "iw5"
         }
 
         # Generate the parsed files with gsc-tool
-        $Null = & $GscToolExePath -m parse -g $EngineName -s pc $SrcDir
+        $Null = & $GscToolExePath -m parse -g $Engine.Name -s pc $SrcDir
         Write-Output "`tGenerated scripts for $($Engine.Label)"
 
         # Check if the user already has a scripts directory, if so, ask to overwrite it
@@ -131,7 +102,7 @@ function GenerateParsedFiles {
         }
 
         # Move the parsed scripts to the engine installation directory
-        $ParsedDir = "$ParsedRootDir\$EngineName"
+        $ParsedDir = "$ParsedRootDir\$($Engine.Name)"
         try {
             Move-Item -Path $ParsedDir -Destination $TargetDir -Force -ErrorAction Stop
             Write-Output "`tScripts installed"
@@ -143,6 +114,11 @@ function GenerateParsedFiles {
     Remove-Item $ParsedRootDir -Recurse
 }
 
+function Cleanup {
+    Remove-Item $DataDir -Recurse
+    Write-Output "Cleaned up"
+}
+
 try {
     DownloadGscTool
     PopulateConfig
@@ -150,3 +126,5 @@ try {
 } catch {
     Write-Output $_.Exception
 }
+
+Cleanup
