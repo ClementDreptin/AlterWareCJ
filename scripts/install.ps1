@@ -1,5 +1,6 @@
+$Global:Cwd = $(Get-Location).Path
+$Global:DataDir = "$Cwd\data"
 $Global:SrcDir = "$PSScriptRoot\..\src"
-$Global:DataDir = "$PSScriptRoot\data"
 $Global:ConfigPath = "$DataDir\config.json"
 $Global:GscToolExePath = "$DataDir\gsc-tool.exe"
 
@@ -54,7 +55,7 @@ function DownloadGscTool {
     # Unzip
     try {
         Expand-Archive $ZipPath -Destination $DataDir
-        Write-Output "$ZipPath unzipped in $DataDir"
+        Write-Output "gsc-tool extracted"
     } catch {
         throw "Could not unzip $ZipPath"
     }
@@ -62,7 +63,6 @@ function DownloadGscTool {
     # Delete the zip file
     try {
         Remove-Item $ZipPath
-        Write-Output "$ZipPath deleted"
     } catch {
         throw "Could not delete $ZipPath"
     }
@@ -103,7 +103,7 @@ function PopulateConfig {
 }
 
 function GenerateParsedFiles {
-    $ParsedRootDir = "$($(Get-Location).Path)\parsed"
+    $ParsedRootDir = "$Cwd\parsed"
 
     foreach ($Engine in $Config) {
         Write-Output "Processing $($Engine.Label)"
