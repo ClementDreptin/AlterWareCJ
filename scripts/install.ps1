@@ -1,6 +1,7 @@
 $Cwd = $(Get-Location).Path
 $DataDir = "$Cwd\data"
 $SrcDir = "$PSScriptRoot\..\src"
+$ParsedDir = "$Cwd\parsed"
 $GscToolExePath = "$DataDir\gsc-tool.exe"
 
 class Engine {
@@ -61,68 +62,72 @@ function DownloadGscTool {
     }
 }
 
-function PopulateConfig {
-    # Load the Windows Forms assembly (required for file dialogs)
-    [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
+function GetInstallPath {
+    param ([Engine]$Engine, [System.Windows.Forms.FolderBrowserDialog]$Browser)
 
-    # Ask the user for the installation path of each engine
-    $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
-    foreach ($Engine in $Config)
-    {
-        $Browser.Description = "Pick $($Engine.Label) installation folder"
-        $Null = $Browser.ShowDialog()
+    $Browser.Description = "Pick $($Engine.Label) installation folder"
+    $Result = $Browser.ShowDialog()
+
+    if ($Result -eq "OK") {
         $Engine.Path = $Browser.SelectedPath
     }
 }
 
 function GenerateParsedFiles {
-    $ParsedRootDir = "$Cwd\parsed"
+    param ([Engine]$Engine)
 
-    foreach ($Engine in $Config) {
-        Write-Output "Processing $($Engine.Label)"
+    Write-Output "Processing $($Engine.Label)"
 
-        # gsc-tool doesn't support iw4 but parsing scripts as iw5 is fine for this mod
-        if ($Engine.Name -eq "iw4") {
-            $Engine.Name = "iw5"
-        }
+    # gsc-tool doesn't support iw4 but parsing scripts as iw5 is fine for this mod
+    if ($Engine.Name -eq "iw4") {
+        $Engine.Name = "iw5"
+    }
 
-        # Generate the parsed files with gsc-tool
-        $Null = & $GscToolExePath -m parse -g $Engine.Name -s pc $SrcDir
-        Write-Output "`tGenerated scripts for $($Engine.Label)"
+    # Generate the parsed files with gsc-tool
+    $Null = & $GscToolExePath -m parse -g $Engine.Name -s pc $SrcDir
+    Write-Output "`tGenerated scripts for $($Engine.Label)"
 
-        # Check if the user already has a scripts directory, if so, ask to overwrite it
-        $TargetDir = "$($Engine.Path)\$($Engine.ScriptDir)"
-        if ([System.IO.Directory]::Exists($TargetDir)) {
-            $Reply = Read-Host "`tA scripts folder already exists, do you want to overwrite it? [y/n]"
-            if ($Reply -eq "y") {
-                Remove-Item $TargetDir -Recurse
-            } else {
-                continue
-            }
-        }
-
-        # Move the parsed scripts to the engine installation directory
-        $ParsedDir = "$ParsedRootDir\$($Engine.Name)"
-        try {
-            Move-Item -Path $ParsedDir -Destination $TargetDir -Force -ErrorAction Stop
-            Write-Output "`tScripts installed"
-        } catch {
-            throw "Couldn't install scripts"
+    # Check if the user already has a scripts directory, if so, ask to overwrite it
+    $TargetDir = "$($Engine.Path)\$($Engine.ScriptDir)"
+    if ([System.IO.Directory]::Exists($TargetDir)) {
+        $Reply = Read-Host "`tA scripts folder already exists, do you want to overwrite it? [y/n]"
+        if ($Reply -eq "y") {
+            Remove-Item $TargetDir -Recurse
+        } else {
+            continue
         }
     }
 
-    Remove-Item $ParsedRootDir -Recurse
+    # Move the parsed scripts to the engine installation directory
+    try {
+    Move-Item -Path "$ParsedDir\$($Engine.Name)" -Destination $TargetDir -Force -ErrorAction Stop
+        Write-Output "`tScripts installed"
+    } catch {
+        throw "Couldn't install scripts"
+    }
 }
 
 function Cleanup {
-    Remove-Item $DataDir -Recurse
+    Remove-Item $DataDir, $ParsedDir -Recurse
     Write-Output "Cleaned up"
 }
 
 try {
     DownloadGscTool
-    PopulateConfig
-    GenerateParsedFiles
+
+    # Load the Windows Forms assembly (required for file dialogs)
+    [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
+
+    # Ask the user for the installation path of each engine
+    $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
+
+    # Generate the gsc scripts
+    foreach ($Engine in $Config) {
+        GetInstallPath $Engine $Browser
+        if ($Engine.Path -ne "") {
+            GenerateParsedFiles $Engine
+        }
+    }
 } catch {
     Write-Output $_.Exception
 }
