@@ -110,7 +110,7 @@ function GenerateParsedScripts {
 }
 
 function Cleanup {
-    Remove-Item $DataDir, $ParsedDir -Recurse
+    Remove-Item $DataDir, $ParsedDir -Recurse -ErrorAction SilentlyContinue
     Write-Output "Cleaned up"
 }
 
