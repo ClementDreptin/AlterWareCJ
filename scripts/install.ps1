@@ -92,8 +92,13 @@ function GenerateParsedScripts {
     # Check if the user already has a scripts directory, if so, ask to overwrite it
     $TargetDir = "$($Engine.Path)\$($Engine.ScriptDir)"
     if ([System.IO.Directory]::Exists($TargetDir)) {
-        $Reply = Read-Host "`tA scripts folder already exists, do you want to overwrite it? [y/n]"
-        if ($Reply -eq "y") {
+        $Reply = [System.Windows.Forms.MessageBox]::Show(
+            "A scripts folder already exists, do you want to overwrite it?",
+            "Overwrite existing scripts",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo
+        )
+
+        if ($Reply -eq "OK") {
             Remove-Item $TargetDir -Recurse
         } else {
             continue
