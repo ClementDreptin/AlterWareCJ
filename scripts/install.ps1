@@ -65,15 +65,17 @@ function DownloadGscTool {
 function GetInstallPath {
     param ([Engine]$Engine, [System.Windows.Forms.FolderBrowserDialog]$Browser)
 
+    # Show folder picker dialog
     $Browser.Description = "Pick $($Engine.Label) installation folder"
     $Result = $Browser.ShowDialog()
 
+    # Only update the engine path if the user clicked OK
     if ($Result -eq "OK") {
         $Engine.Path = $Browser.SelectedPath
     }
 }
 
-function GenerateParsedFiles {
+function GenerateParsedScripts {
     param ([Engine]$Engine)
 
     Write-Output "Processing $($Engine.Label)"
@@ -115,17 +117,17 @@ function Cleanup {
 try {
     DownloadGscTool
 
-    # Load the Windows Forms assembly (required for file dialogs)
+    # Create a folder picker dialog object
     [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-
-    # Ask the user for the installation path of each engine
     $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
 
     # Generate the gsc scripts
     foreach ($Engine in $Engines) {
         GetInstallPath $Engine $Browser
+
+        # Don't generate the scripts if the folder picker dialog was cancelled
         if ($Engine.Path -ne "") {
-            GenerateParsedFiles $Engine
+            GenerateParsedScripts $Engine
         }
     }
 } catch {
