@@ -11,7 +11,7 @@ class Engine {
     [string]$ScriptDir
 }
 
-$Config = @(
+$Engines = @(
     [Engine]@{
         Name = "iw4"
         Label = "MW2"
@@ -122,7 +122,7 @@ try {
     $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
 
     # Generate the gsc scripts
-    foreach ($Engine in $Config) {
+    foreach ($Engine in $Engines) {
         GetInstallPath $Engine $Browser
         if ($Engine.Path -ne "") {
             GenerateParsedFiles $Engine
