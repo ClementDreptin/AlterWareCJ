@@ -98,16 +98,16 @@ function GenerateParsedScripts {
             [System.Windows.Forms.MessageBoxButtons]::YesNo
         )
 
-        if ($Reply -eq "OK") {
+        if ($Reply -eq "Yes") {
             Remove-Item $TargetDir -Recurse
         } else {
-            continue
+            return
         }
     }
 
     # Move the parsed scripts to the engine installation directory
     try {
-    Move-Item -Path "$ParsedDir\$($Engine.Name)" -Destination $TargetDir -Force -ErrorAction Stop
+        Move-Item -Path "$ParsedDir\$($Engine.Name)" -Destination $TargetDir -Force -ErrorAction Stop
         Write-Output "`tScripts installed"
     } catch {
         throw "Couldn't install scripts"
