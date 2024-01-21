@@ -1,8 +1,11 @@
+param([switch]$Dev)
+
 $Cwd = $(Get-Location).Path
 $DataDir = "$Cwd\data"
 $SrcDir = "$PSScriptRoot\..\src"
 $ParsedDir = "$Cwd\parsed"
 $GscToolExePath = "$DataDir\gsc-tool.exe"
+$ConfigPath = "$DataDir\config.json"
 
 class Engine {
     [string]$Name
@@ -36,6 +39,12 @@ function DownloadGscTool {
     $ZipPath = "$DataDir\gsc-tool.zip"
     $DownloadUri = "https://github.com/xensik/gsc-tool/releases/latest/download/windows-x64-release.zip"
 
+    # In dev mode, skip the download if the binary is already on disk
+    if ($Dev.IsPresent -and [System.IO.File]::Exists($GscToolExePath)) {
+        Write-Output "gsc-tool already downloaded"
+        return
+    }
+
     # Download the latest binary
     try {
         $Null = mkdir -Force $DataDir
@@ -43,12 +52,12 @@ function DownloadGscTool {
         $WebClient.DownloadFile($DownloadUri, $ZipPath)
         Write-Output "gsc-tool downloaded"
     } catch {
-        throw "Could not download the gsc-tool binary!"
+        throw "Could not download the gsc-tool binary"
     }
 
     # Unzip
     try {
-        Expand-Archive $ZipPath -Destination $DataDir
+        Expand-Archive $ZipPath -Destination $DataDir -Force
         Write-Output "gsc-tool extracted"
     } catch {
         throw "Could not unzip $ZipPath"
@@ -81,33 +90,39 @@ function GenerateParsedScripts {
     Write-Output "Processing $($Engine.Label)"
 
     # gsc-tool doesn't support iw4 but parsing scripts as iw5 is fine for this mod
-    if ($Engine.Name -eq "iw4") {
-        $Engine.Name = "iw5"
+    $EngineName = $Engine.Name
+    if ($EngineName -eq "iw4") {
+        $EngineName = "iw5"
     }
 
     # Generate the parsed files with gsc-tool
-    $Null = & $GscToolExePath -m parse -g $Engine.Name -s pc $SrcDir
+    $Null = & $GscToolExePath -m parse -g $EngineName -s pc $SrcDir
     Write-Output "`tGenerated scripts for $($Engine.Label)"
 
     # Check if the user already has a scripts directory, if so, ask to overwrite it
     $TargetDir = "$($Engine.Path)\$($Engine.ScriptDir)"
     if ([System.IO.Directory]::Exists($TargetDir)) {
-        $Reply = [System.Windows.Forms.MessageBox]::Show(
-            "A scripts folder already exists, do you want to overwrite it?",
-            "Overwrite existing scripts",
-            [System.Windows.Forms.MessageBoxButtons]::YesNo
-        )
+        # Always overwrite in dev mode
+        if (!$Dev.IsPresent) {
+            $Reply = [System.Windows.Forms.MessageBox]::Show(
+                "A scripts folder already exists, do you want to overwrite it?",
+                "Overwrite existing scripts",
+                [System.Windows.Forms.MessageBoxButtons]::YesNo
+            )
 
-        if ($Reply -eq "Yes") {
-            Remove-Item $TargetDir -Recurse
+            if ($Reply -eq "Yes") {
+                Remove-Item $TargetDir -Recurse
+            } else {
+                return
+            }
         } else {
-            return
+            Remove-Item $TargetDir -Recurse
         }
     }
 
     # Move the parsed scripts to the engine installation directory
     try {
-        Move-Item -Path "$ParsedDir\$($Engine.Name)" -Destination $TargetDir -Force -ErrorAction Stop
+        Move-Item -Path "$ParsedDir\$($EngineName)" -Destination $TargetDir -Force -ErrorAction Stop
         Write-Output "`tScripts installed"
     } catch {
         throw "Couldn't install scripts"
@@ -115,7 +130,13 @@ function GenerateParsedScripts {
 }
 
 function Cleanup {
-    Remove-Item $DataDir, $ParsedDir -Recurse -ErrorAction SilentlyContinue
+    # Keep the data dir between runs in dev mode
+    if (!$Dev.IsPresent) {
+        Remove-Item $DataDir -Recurse -ErrorAction SilentlyContinue
+    }
+
+    Remove-Item $ParsedDir -Recurse -ErrorAction SilentlyContinue
+
     Write-Output "Cleaned up"
 }
 
@@ -126,14 +147,25 @@ try {
     [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
     $Browser = New-Object System.Windows.Forms.FolderBrowserDialog
 
+    # Load the path from the config when in dev mode instead of using a folder picker dialog
+    if ($Dev.IsPresent -and [System.IO.File]::Exists($ConfigPath)) {
+        $Engines = Get-Content $ConfigPath | ConvertFrom-Json
+    } else {
+        foreach ($Engine in $Engines) {
+            GetInstallPath $Engine $Browser
+        }
+    }
+
     # Generate the gsc scripts
     foreach ($Engine in $Engines) {
-        GetInstallPath $Engine $Browser
-
-        # Don't generate the scripts if the folder picker dialog was cancelled
         if ($Engine.Path -ne "") {
             GenerateParsedScripts $Engine
         }
+    }
+
+    # Dump the engines to a file when in dev mode
+    if ($Dev.IsPresent -and ![System.IO.File]::Exists($ConfigPath)) {
+        $Engines | ConvertTo-Json | Out-File $ConfigPath
     }
 } catch {
     Write-Output $_.Exception
