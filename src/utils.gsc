@@ -33,5 +33,5 @@ ProjectForward(distance)
 
 PrintError(message)
 {
-    printLn("*********** Error ***********\n" + message + "\n\tat " + __FILE__ + ":" + __LINE__);
+    printLn("*********** Error ***********\n" + message);
 }
