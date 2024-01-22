@@ -1,11 +1,23 @@
 init()
 {
-    level.buttonCommands = [];
-    level.buttonCommands[0] = "+smoke";
-    level.buttonCommands[1] = "+frag";
-    level.buttonCommands[2] = "+talk";
-
     level thread OnPlayerConnected();
+}
+
+RegisterCommands()
+{
+    self.commands = [];
+
+    self.commands[0] = spawnStruct();
+    self.commands[0].command = "+smoke";
+    self.commands[0].func = scripts\saveload::LoadPosition;
+
+    self.commands[1] = spawnStruct();
+    self.commands[1].command = "+frag";
+    self.commands[1].func = scripts\saveload::SavePosition;
+
+    self.commands[2] = spawnStruct();
+    self.commands[2].command = "+talk";
+    self.commands[2].func = scripts\carepackage::SpawnCarePackage;
 }
 
 OnPlayerConnected()
@@ -15,6 +27,8 @@ OnPlayerConnected()
     for (;;)
     {
         level waittill("connected", player);
+
+        player RegisterCommands();
         player thread OnPlayerSpawned();
     }
 }
@@ -27,27 +41,24 @@ OnPlayerSpawned()
     {
         self waittill("spawned_player");
 
-        foreach (buttonCommand in level.buttonCommands)
-            self thread MonitorButton(buttonCommand);
+        foreach (c in self.commands)
+            self thread MonitorCommand(c.command);
     }
 }
 
-MonitorButton(buttonCommand)
+MonitorCommand(command)
 {
     self endon("disconnect");
     self endon("death");
 
-    self notifyOnPlayerCommand(buttonCommand, buttonCommand);
+    self notifyOnPlayerCommand(command, command);
 
     for (;;)
     {
-        self waittill(buttonCommand);
+        self waittill(command);
 
-        if (buttonCommand == "+smoke")
-            self scripts\saveload::LoadPosition();
-        else if (buttonCommand == "+frag")
-            self scripts\saveload::SavePosition();
-        else if (buttonCommand == "+talk")
-            self scripts\carepackage::SpawnCarePackage();
+        foreach (c in self.commands)
+            if (c.command == command)
+                self [[c.func]]();
     }
 }
