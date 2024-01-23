@@ -8,15 +8,15 @@ RegisterCommands()
     self.commands = [];
 
     self.commands[0] = spawnStruct();
-    self.commands[0].command = "+smoke";
+    self.commands[0].action = "+smoke";
     self.commands[0].func = scripts\saveload::LoadPosition;
 
     self.commands[1] = spawnStruct();
-    self.commands[1].command = "+frag";
+    self.commands[1].action = "+frag";
     self.commands[1].func = scripts\saveload::SavePosition;
 
     self.commands[2] = spawnStruct();
-    self.commands[2].command = "+talk";
+    self.commands[2].action = "+talk";
     self.commands[2].func = scripts\carepackage::SpawnCarePackage;
 }
 
@@ -41,24 +41,24 @@ OnPlayerSpawned()
     {
         self waittill("spawned_player");
 
-        foreach (c in self.commands)
-            self thread MonitorCommand(c.command);
+        foreach (command in self.commands)
+            self thread MonitorAction(command.action);
     }
 }
 
-MonitorCommand(command)
+MonitorAction(action)
 {
     self endon("disconnect");
     self endon("death");
 
-    self notifyOnPlayerCommand(command, command);
+    self notifyOnPlayerCommand(action, action);
 
     for (;;)
     {
-        self waittill(command);
+        self waittill(action);
 
-        foreach (c in self.commands)
-            if (c.command == command)
-                self [[c.func]]();
+        foreach (command in self.commands)
+            if (command.action == action)
+                self [[command.func]]();
     }
 }
