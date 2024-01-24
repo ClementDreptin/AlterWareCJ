@@ -1,3 +1,9 @@
+// gsc-tool doesn't support IW4 so we preprocess scripts for IW5 instead,
+// available functions are similar enough to run fine on iw4x
+#ifdef IW5
+#define IW4
+#endif
+
 _GetAngles()
 {
 #ifdef S1
@@ -13,6 +19,15 @@ _SetAngles(angles)
     return self setAngles(angles);
 #else
     return self setPlayerAngles(angles);
+#endif
+}
+
+_IsBot(player)
+{
+#ifdef IW4
+    return player isTestClient();
+#else
+    return isBot(player);
 #endif
 }
 

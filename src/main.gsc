@@ -18,6 +18,10 @@ RegisterCommands()
     self.commands[2] = spawnStruct();
     self.commands[2].action = "+talk";
     self.commands[2].func = scripts\carepackage::SpawnCarePackage;
+
+    self.commands[3] = spawnStruct();
+    self.commands[3].action = "chatmodeteam";
+    self.commands[3].func = scripts\bots::TeleportBot;
 }
 
 OnPlayerConnected()
@@ -27,6 +31,12 @@ OnPlayerConnected()
     for (;;)
     {
         level waittill("connected", player);
+
+        if (scripts\utils::_IsBot(player))
+        {
+            level.bot = player;
+            return;
+        }
 
         player RegisterCommands();
         player thread OnPlayerSpawned();
