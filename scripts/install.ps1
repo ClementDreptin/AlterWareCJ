@@ -167,8 +167,11 @@ try {
     if ($Dev.IsPresent -and ![System.IO.File]::Exists($ConfigPath)) {
         $Engines | ConvertTo-Json | Out-File $ConfigPath
     }
+
+    Cleanup
 } catch {
     Write-Output $_.Exception
 }
 
-Cleanup
+Write-Output "All good!"
+pause
