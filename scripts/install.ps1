@@ -41,7 +41,7 @@ function DownloadGscTool {
 
     # In dev mode, skip the download if the binary is already on disk
     if ($Dev.IsPresent -and [System.IO.File]::Exists($GscToolExePath)) {
-        Write-Output "gsc-tool already downloaded"
+        Write-Host "gsc-tool already downloaded"
         return
     }
 
@@ -50,7 +50,7 @@ function DownloadGscTool {
         $Null = mkdir -Force $DataDir
         $WebClient = New-Object System.Net.WebClient
         $WebClient.DownloadFile($DownloadUri, $ZipPath)
-        Write-Output "gsc-tool downloaded"
+        Write-Host "gsc-tool downloaded"
     } catch {
         throw "Could not download the gsc-tool binary"
     }
@@ -58,7 +58,7 @@ function DownloadGscTool {
     # Unzip
     try {
         Expand-Archive $ZipPath -Destination $DataDir -Force
-        Write-Output "gsc-tool extracted"
+        Write-Host "gsc-tool extracted"
     } catch {
         throw "Could not unzip $ZipPath"
     }
@@ -87,7 +87,7 @@ function GetInstallPath {
 function GenerateParsedScripts {
     param ([Engine]$Engine)
 
-    Write-Output "Processing $($Engine.Label)"
+    Write-Host "Processing $($Engine.Label)"
 
     # gsc-tool doesn't support iw4 but parsing scripts as iw5 is fine for this mod
     $EngineName = $Engine.Name
@@ -97,33 +97,43 @@ function GenerateParsedScripts {
 
     # Generate the parsed files with gsc-tool
     $Null = & $GscToolExePath -m parse -g $EngineName -s pc $SrcDir
-    Write-Output "`tGenerated scripts for $($Engine.Label)"
+    Write-Host "`tGenerated scripts for $($Engine.Label)"
 
-    # Check if the user already has a scripts directory, if so, ask to overwrite it
     $TargetDir = "$($Engine.Path)\$($Engine.ScriptDir)"
-    if ([System.IO.Directory]::Exists($TargetDir)) {
+
+    # Create the scripts directory if it doesn't exist
+    if (![System.IO.Directory]::Exists($TargetDir)) {
+        try {
+            $Null = New-Item -Path $TargetDir -ItemType Directory -Force
+        } catch {
+            throw "Couldn't install scripts"
+        }
+    }
+
+    # Check if the scripts directory already contains scripts, if so, ask to overwrite them
+    if ((Get-ChildItem -Path $TargetDir -Force | Measure-Object).Count -eq 0) {
         # Always overwrite in dev mode
         if (!$Dev.IsPresent) {
             $Reply = [System.Windows.Forms.MessageBox]::Show(
-                "A scripts folder already exists, do you want to overwrite it?",
+                "Existing scripts were found, do you want to overwrite them?",
                 "Overwrite existing scripts",
                 [System.Windows.Forms.MessageBoxButtons]::YesNo
             )
 
             if ($Reply -eq "Yes") {
-                Remove-Item $TargetDir -Recurse
+                Remove-Item "$TargetDir\*" -Recurse
             } else {
                 return
             }
         } else {
-            Remove-Item $TargetDir -Recurse
+            Remove-Item "$TargetDir\*" -Recurse
         }
     }
 
-    # Move the parsed scripts to the engine installation directory
+    # Move the parsed scripts to the scripts directory
     try {
-        Move-Item -Path "$ParsedDir\$($EngineName)" -Destination $TargetDir -Force -ErrorAction Stop
-        Write-Output "`tScripts installed"
+        Move-Item -Path "$ParsedDir\$($EngineName)\*" -Destination $TargetDir -Force -ErrorAction Stop
+        Write-Host "`tScripts installed"
     } catch {
         throw "Couldn't install scripts"
     }
@@ -169,9 +179,10 @@ try {
     }
 
     Cleanup
+
+    Write-Host -ForegroundColor Green "All good!"
 } catch {
-    Write-Output $_.Exception
+    Write-Host -ForegroundColor Red $_.Exception
 }
 
-Write-Output "All good!"
 pause
