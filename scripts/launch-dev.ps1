@@ -20,7 +20,8 @@ if (![System.IO.File]::Exists($ConfigPath)) {
 $Config = $null
 try {
     $Config = $(Get-Content $ConfigPath | ConvertFrom-Json) | Where-Object { $_.Name -eq $EngineName }
-} catch {
+}
+catch {
     Write-Output "Error in config file format"
     exit 1
 }

@@ -16,21 +16,21 @@ class Engine {
 
 $Engines = @(
     [Engine]@{
-        Name = "iw4"
-        Label = "MW2"
-        Path = ""
+        Name      = "iw4"
+        Label     = "MW2"
+        Path      = ""
         ScriptDir = "userraw\scripts"
     },
     [Engine]@{
-        Name = "iw6"
-        Label = "Ghosts"
-        Path = ""
+        Name      = "iw6"
+        Label     = "Ghosts"
+        Path      = ""
         ScriptDir = "iw6\scripts"
     },
     [Engine]@{
-        Name = "s1"
-        Label = "AW"
-        Path = ""
+        Name      = "s1"
+        Label     = "AW"
+        Path      = ""
         ScriptDir = "s1\scripts"
     }
 )
@@ -51,7 +51,8 @@ function DownloadGscTool {
         $WebClient = New-Object System.Net.WebClient
         $WebClient.DownloadFile($DownloadUri, $ZipPath)
         Write-Host "gsc-tool downloaded"
-    } catch {
+    }
+    catch {
         throw "Could not download the gsc-tool binary"
     }
 
@@ -59,14 +60,16 @@ function DownloadGscTool {
     try {
         Expand-Archive $ZipPath -Destination $DataDir -Force
         Write-Host "gsc-tool extracted"
-    } catch {
+    }
+    catch {
         throw "Could not unzip $ZipPath"
     }
 
     # Delete the zip file
     try {
         Remove-Item $ZipPath
-    } catch {
+    }
+    catch {
         throw "Could not delete $ZipPath"
     }
 }
@@ -105,7 +108,8 @@ function GenerateParsedScripts {
     if (![System.IO.Directory]::Exists($TargetDir)) {
         try {
             $Null = New-Item -Path $TargetDir -ItemType Directory -Force
-        } catch {
+        }
+        catch {
             throw "Couldn't install scripts"
         }
     }
@@ -122,10 +126,12 @@ function GenerateParsedScripts {
 
             if ($Reply -eq "Yes") {
                 Remove-Item "$TargetDir\*" -Recurse
-            } else {
+            }
+            else {
                 return
             }
-        } else {
+        }
+        else {
             Remove-Item "$TargetDir\*" -Recurse
         }
     }
@@ -134,7 +140,8 @@ function GenerateParsedScripts {
     try {
         Move-Item -Path "$ParsedDir\$($EngineName)\*" -Destination $TargetDir -Force -ErrorAction Stop
         Write-Host "`tScripts installed"
-    } catch {
+    }
+    catch {
         throw "Couldn't install scripts"
     }
 }
@@ -160,7 +167,8 @@ try {
     # Load the path from the config when in dev mode instead of using a folder picker dialog
     if ($Dev.IsPresent -and [System.IO.File]::Exists($ConfigPath)) {
         $Engines = Get-Content $ConfigPath | ConvertFrom-Json
-    } else {
+    }
+    else {
         foreach ($Engine in $Engines) {
             GetInstallPath $Engine $Browser
         }
@@ -181,7 +189,8 @@ try {
     Cleanup
 
     Write-Host -ForegroundColor Green "All good!"
-} catch {
+}
+catch {
     Write-Host -ForegroundColor Red $_.Exception
 }
 
